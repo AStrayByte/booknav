@@ -29,7 +29,7 @@ class TestCFI(unittest.TestCase):
         self.assertEqual(str_found[:32], "\nNor were these my only visions.")
     
     def test_frankenstein_kepub(self):
-        cfi = """/26/30!/4/2[book-columns]/2[book-inner]/2[pgepubid00014]/30/2[kobo.15.1],/1:1,/1:45"""
+        cfi = """/6/30!/4/2[book-columns]/2[book-inner]/2[pgepubid00014]/30/2[kobo.15.1],/1:1,/1:45"""
         epub_path = "test_books/Frankenstein_converted.kepub.epub"
         str_found = find_str_from_cfi_in_epub(epub_path, cfi,)
         self.assertEqual(str_found[:32], "\nThis was strange and unexpected")

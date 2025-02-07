@@ -169,3 +169,7 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+
+# my stuff
+temp_epub_dir
+.DS_Store

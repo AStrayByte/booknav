@@ -8,6 +8,8 @@ This project hopes to be entirely written in standard python with no extra packa
 
 # Tests
 
+![Test Status](https://github.com/AStrayByte/booknav/actions/workflows/python-app.yml/badge.svg)
+
 ### I have included 3 different books to test on:
 
 | Book                | Details                                                                                               |

@@ -1,8 +1,15 @@
 import unittest
-from booknav import FailureException, find_str_from_cfi_in_epub, kobo_to_cfi
+from booknav import FailureException, cfi_to_kobo, find_str_from_cfi_in_epub, kobo_to_cfi
 
 
 class TestCFI(unittest.TestCase):
+    def test_cfi_to_kobo_frankenstein(self):
+        cfi = """/6/30!/4/2[book-columns]/2[book-inner]/2[pgepubid00014]/30/2[kobo.15.1],/1:1,/1:45"""
+        epub_path = "test_books/Frankenstein_converted.kepub.epub"
+        kobo_span, file_path = cfi_to_kobo(epub_path, cfi)
+        self.assertEqual(kobo_span, "kobo.15.1")
+        self.assertEqual(file_path, "OEBPS/2691434632134220948_84-h-13.htm.xhtml")
+
     def test_kobo_to_cfi_frankenstein_fail(self):
         kobo_location_source = "OEBPS/2691434632134220948_84-h-13.htm.xhtml"
         kobo_span = "kobo.999.1"

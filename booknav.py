@@ -73,62 +73,8 @@ def get_root_dir(content_file) -> str:
         return os.path.dirname(content_file)
     return ""
 
-def find_str_from_cfi_in_epub(epub_path, cfi) -> str:
-    """Finds a string from the CFI (Canonical Fragment Identifier) in the EPUB file."""
-
-    reset_temp_dir()
-    unzip_epub(epub_path)
-
-    content_file = find_content_file()
-    root_dir = get_root_dir(content_file)
-    
-    cfi_chunks = cfi.split("/")
-    chunks_index = 0
-    if cfi_chunks[chunks_index] == "":
-        chunks_index += 1
-    
-    chunk_groups = re.search(r'(?P<index>\d+){1}(?:\[(?P<id>.*)\])?(?P<extra>.)*', cfi_chunks[chunks_index])
-    index = int(chunk_groups.group("index"))
-    id = chunk_groups.group("id")
-    extra = chunk_groups.group("extra")
-    
-    if index % 2 != 0:
-        raise FailureException(f"ERROR: Spine index must be even, but got {index}")
-    
-    spine_index, spine_element, package_element = get_spines(content_file)
-    manifest = get_manifest(package_element)
-    
-    if not len(manifest):
-        raise FailureException(f"ERROR: Could not find manifest tag in package")
-    
-    if index != spine_index:
-        raise FailureException(f"ERROR: Spine index must match the spine index in the content file. Got {index} but expected {spine_index}")
-    
-    chunks_index += 1
-    current_element = spine_element
-    in_spine = True
-
-    while chunks_index < len(cfi_chunks):
-        if ":" in cfi_chunks[chunks_index]:
-            if id := current_element.get("id"):
-                # print(id)
-                ...
-            return current_element.text
-        
-        chunk_groups = re.search(r'(?P<index>\d+){1}(?:\[(?P<id>.*)\])?(?P<extra>.)*', cfi_chunks[chunks_index])
-        index = int(chunk_groups.group("index"))
-        id = chunk_groups.group("id")
-        extra = chunk_groups.group("extra")
-        
-        next_element = grab_xth_child(current_element, index, id, extra, in_spine, manifest, root_dir)
-        chunks_index += 1
-        in_spine = False
-        current_element = next_element
-
-    return ""
-
-def grab_xth_child(element: ET.Element, index: int, id: str, extra: str, in_spine: bool, manifest, root_dir: str) -> ET.Element:
-    """Grabs the xth child of an element."""
+def grab_xth_child(element: ET.Element, index: int, id: str, extra: str, in_spine: bool, manifest, root_dir: str) -> Tuple[ET.Element, str]:
+    """Grabs the xth child of an element and return path to file if we jump to a different file."""
     if index % 2 != 0:
         raise FailureException(f"ERROR: index must be even, but got {index}")
     if index == 0:
@@ -152,8 +98,8 @@ def grab_xth_child(element: ET.Element, index: int, id: str, extra: str, in_spin
             if href := item.get("href"):
                 path = f"{TEMP_DIR}/{root_dir}/{href}" if root_dir else f"{TEMP_DIR}/{href}"
                 elem = grab_root_element_from_file(path)
-                return elem
-    return elem
+                return elem, path
+    return elem, ""
 
 def get_manifest(package_element: ET.Element) -> ET.Element:
     """Gets the manifest element from the package element."""
@@ -225,6 +171,79 @@ def kobo_to_cfi(epub_path: str, kobo_location_source: str, kobo_span: str) -> st
         raise FailureException(f"ERROR: Could not find {kobo_span} in {kobo_location_source}")
 
     return cfi
+
+def cfi_to_element(epub_path: str, cfi: str) -> Tuple[ET.Element, str]:
+
+    reset_temp_dir()
+    unzip_epub(epub_path)
+
+    content_file = find_content_file()
+    root_dir = get_root_dir(content_file)
+    
+    cfi_chunks = cfi.split("/")
+    chunks_index = 0
+    if cfi_chunks[chunks_index] == "":
+        chunks_index += 1
+    
+    chunk_groups = re.search(r'(?P<index>\d+){1}(?:\[(?P<id>.*)\])?(?P<extra>.)*', cfi_chunks[chunks_index])
+    index = int(chunk_groups.group("index"))
+    id = chunk_groups.group("id")
+    extra = chunk_groups.group("extra")
+    
+    if index % 2 != 0:
+        raise FailureException(f"ERROR: Spine index must be even, but got {index}")
+    
+    spine_index, spine_element, package_element = get_spines(content_file)
+    manifest = get_manifest(package_element)
+    
+    if not len(manifest):
+        raise FailureException(f"ERROR: Could not find manifest tag in package")
+    
+    if index != spine_index:
+        raise FailureException(f"ERROR: Spine index must match the spine index in the content file. Got {index} but expected {spine_index}")
+    
+    chunks_index += 1
+    current_element = spine_element
+    in_spine = True
+
+    found_file_path = ""
+    while chunks_index < len(cfi_chunks):
+        if ":" in cfi_chunks[chunks_index]:
+            if id := current_element.get("id"):
+                # print(id)
+                ...
+            return current_element, found_file_path
+        
+        chunk_groups = re.search(r'(?P<index>\d+){1}(?:\[(?P<id>.*)\])?(?P<extra>.)*', cfi_chunks[chunks_index])
+        index = int(chunk_groups.group("index"))
+        id = chunk_groups.group("id")
+        extra = chunk_groups.group("extra")
+        
+        next_element, file_path = grab_xth_child(current_element, index, id, extra, in_spine, manifest, root_dir)
+        if file_path:
+            found_file_path = file_path
+        chunks_index += 1
+        in_spine = False
+        current_element = next_element
+
+    raise FailureException(f"ERROR: Could not find {cfi} in {epub_path}")
+
+def find_str_from_cfi_in_epub(epub_path, cfi) -> str:
+    """Finds a string from the CFI (Canonical Fragment Identifier) in the EPUB file."""
+    element, _ = cfi_to_element(epub_path, cfi)
+    return element.text
+
+def cfi_to_kobo(epub_path: str, cfi: str) -> Tuple[str, str]:
+    """Converts a CFI to a Kobo span and file path."""
+    re_result = re.search(r'kobo\.\d+\.\d+', cfi)
+    if not re_result:
+        raise FailureException(f"ERROR: Could not find kobo span in {cfi}")
+    kobo_span = re_result.group(0)
+    if not kobo_span:
+        raise FailureException(f"ERROR: Could not find kobo_span in {cfi}")
+    _, file_path = cfi_to_element(epub_path, cfi)
+    file_path = file_path[file_path.find(TEMP_DIR) + len(TEMP_DIR) + 1:]
+    return kobo_span, file_path
 
 if __name__ == "__main__":
     str_to_search_for = "Some string to search for"

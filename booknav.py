@@ -15,13 +15,13 @@ def reset_temp_dir():
         shutil.rmtree(TEMP_DIR)  # Safely remove a directory and all its contents
     os.makedirs(TEMP_DIR)  # Recreate the temp directory
 
-def unzip_epub(epub_path, temp_dir):
+def unzip_epub(epub_path):
     """Unzips the EPUB file into the specified temporary directory."""
-    os.system(f"unzip -q {epub_path} -d {temp_dir}")
+    os.system(f"unzip -q {epub_path} -d {TEMP_DIR}")
 
-def find_content_file(temp_dir) -> str:
+def find_content_file() -> str:
     """Finds the default content file specified in the container.xml."""
-    container_path = os.path.join(temp_dir, "META-INF/container.xml")
+    container_path = os.path.join(TEMP_DIR, "META-INF/container.xml")
     with open(container_path, "r") as f:
         container_xml = f.read()
     rootfile = re.search(r'<rootfile.*?full-path="([^"]+)"', container_xml).group(1)
@@ -56,11 +56,6 @@ def get_spines(content_file) -> Tuple[int, ET.Element]:
 
     return spine_index, spine_element, package_element
 
-def id_str(element: ET.Element) -> str:
-    if id := element.get("id"):
-        return f"[{id}]"
-    return ""
-
 def grab_root_element_from_file(file_name: str) -> ET.Element:
     """Grabs the root XML element from a file."""
     try:
@@ -78,16 +73,13 @@ def get_root_dir(content_file) -> str:
         return os.path.dirname(content_file)
     return ""
 
-def find_str_from_cfi_in_epub(epub_path, cfi, TEMP_DIR_OVERRIDE=TEMP_DIR) -> str:
+def find_str_from_cfi_in_epub(epub_path, cfi) -> str:
     """Finds a string from the CFI (Canonical Fragment Identifier) in the EPUB file."""
-    global TEMP_DIR
-    TEMP_DIR = TEMP_DIR_OVERRIDE if TEMP_DIR_OVERRIDE else "temp_epub_dir"
 
-    if TEMP_DIR == "temp_epub_dir":
-        reset_temp_dir()
-        unzip_epub(epub_path, TEMP_DIR)
+    reset_temp_dir()
+    unzip_epub(epub_path)
 
-    content_file = find_content_file(TEMP_DIR)
+    content_file = find_content_file()
     root_dir = get_root_dir(content_file)
     
     cfi_chunks = cfi.split("/")
@@ -170,29 +162,6 @@ def get_manifest(package_element: ET.Element) -> ET.Element:
             return child
     return None
 
-def find_cfi_from_str_in_epub(epub_path, str_to_search_for):
-    cfi = "/"
-
-    if TEMP_DIR == "temp_epub_dir":
-        # Empty out our temp directory
-        reset_temp_dir()
-        # Unzip the epub file to our temp directory
-        unzip_epub(epub_path, TEMP_DIR)
-    
-
-#     For a Standard EPUB CFI, the leading step in the CFI must start with a slash (/) followed by an even number that references the spine child element of the Package Document's root package element. The Package Document traversed by the CFI must be the one specified as the Default Rendition in the EPUB Publication's META-INF/container.xml file (i.e., the Package Document referenced by the first rootfile element in container.xml).
-
-# For an Intra-Publication EPUB CFI, the first step must start with a slash followed by a node number that references a position in Package Document starting from the root package element.
-
-    # Check the META-INF/container.xml file to find the default rendition
-    content_file = find_content_file(TEMP_DIR)
-    print(f"Default rendition: {content_file}")
-
-    spine_index, spine_element, package_element = get_spines(content_file)
-    cfi += f"{spine_index}{id_str(spine_element)}/"
-    
-    return cfi
-
 def find_item_id_with_href_in_manifest(manifest: ET.Element, href: str) -> str:
     for item in manifest:
         if item.get("href") == href:
@@ -224,12 +193,10 @@ def find_path_in_xml(element, target, path=None):
     return None
 
 def kobo_to_cfi(epub_path: str, kobo_location_source: str, kobo_span: str) -> str:
-    global TEMP_DIR
-    TEMP_DIR == "temp_epub_dir"
     reset_temp_dir()
-    unzip_epub(epub_path, TEMP_DIR)
+    unzip_epub(epub_path)
 
-    content_file = find_content_file(TEMP_DIR)
+    content_file = find_content_file()
     root_dir = get_root_dir(content_file)
     
     spine_index, spine_element, package_element = get_spines(content_file)
@@ -262,7 +229,6 @@ def kobo_to_cfi(epub_path: str, kobo_location_source: str, kobo_span: str) -> st
 if __name__ == "__main__":
     str_to_search_for = "Some string to search for"
     epub_path = "test_epub_1.epub"
-    TEMP_DIR = "test_epub_1"
 
     try:
         cfi = find_str_from_cfi_in_epub(epub_path, str_to_search_for)

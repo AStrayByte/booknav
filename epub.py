@@ -192,6 +192,73 @@ def find_cfi_from_str_in_epub(epub_path, str_to_search_for):
     cfi += f"{spine_index}{id_str(spine_element)}/"
     
     return cfi
+
+def find_item_id_with_href_in_manifest(manifest: ET.Element, href: str) -> str:
+    for item in manifest:
+        if item.get("href") == href:
+            id = item.get("id")
+            return id
+    raise FailureException(f"ERROR: Could not find item with {href} in manifest inside content file")
+
+def find_item_ref_index(spine_element: ET.Element, item_id: str) -> int:
+    for index, itemref in enumerate(spine_element, start=1):
+        if itemref.get("idref") == item_id:
+            return index * 2
+    raise FailureException(f"ERROR: Could not find itemref with {item_id} in spine element")
+
+def find_path_in_xml(element, target, path=None):
+    """ Recursively finds the path to the first occurrence of koboSpan with id 'target'. """
+    if path is None:
+        path = []
+
+    for i, child in enumerate(element, start=1):
+        # if <span class="koboSpan" id="kobo.15.3">
+        if child.get("id") == target and child.get("class") == "koboSpan":
+            return path + [(i*2, child.get("id"))]
+
+        # Recursively search in child nodes
+        result = find_path_in_xml(child, target, path + [(i*2, child.get("id"))])
+        if result:
+            return result
+
+    return None
+
+def kobo_to_cfi(epub_path: str, kobo_location_source: str, kobo_span: str) -> str:
+    global TEMP_DIR
+    TEMP_DIR == "temp_epub_dir"
+    reset_temp_dir()
+    unzip_epub(epub_path, TEMP_DIR)
+
+    content_file = find_content_file(TEMP_DIR)
+    root_dir = get_root_dir(content_file)
+    
+    spine_index, spine_element, package_element = get_spines(content_file)
+    manifest = get_manifest(package_element)
+
+    file_to_search_for = kobo_location_source
+    if root_dir:
+        if kobo_location_source.startswith(root_dir):
+            file_to_search_for = kobo_location_source[len(root_dir)+1:]
+    item_id = find_item_id_with_href_in_manifest(manifest, file_to_search_for)
+    item_ref_index = find_item_ref_index(spine_element, item_id)
+
+    cfi = f"/{spine_index}/{item_ref_index}!/"
+
+    # read html file as xml 
+    with open(f"{TEMP_DIR}/{kobo_location_source}", "r") as f:
+        html_content_as_str = f.read()
+    xml_content = ET.fromstring(html_content_as_str)
+    # search for kobo_span
+    path = find_path_in_xml(xml_content, kobo_span)
+    if path:
+        for index, id in path:
+            id_str = f"[{id}]" if id else ""
+            cfi += f"{index}{id_str}/"
+    else:
+        raise FailureException(f"ERROR: Could not find {kobo_span} in {kobo_location_source}")
+
+    return cfi
+
 if __name__ == "__main__":
     str_to_search_for = "Some string to search for"
     epub_path = "test_epub_1.epub"

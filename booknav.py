@@ -210,6 +210,7 @@ def cfi_to_element(epub_path: str, cfi: str) -> Tuple[ET.Element, str]:
     while chunks_index < len(cfi_chunks):
         if ":" in cfi_chunks[chunks_index]:
             if id := current_element.get("id"):
+                # this id should be the kobo span id but we can grab it from the cfi more easily anyways
                 # print(id)
                 ...
             return current_element, found_file_path

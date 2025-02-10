@@ -26,3 +26,12 @@ A 2nd copy of each was made using Kepubify to test on Kepubs as well as epubs.
 [Alice in Wonderland]: https://www.gutenberg.org/ebooks/11
 [Frankenstein]: https://www.gutenberg.org/ebooks/84
 [EpubCFIDoc]: https://idpf.org/epub/linking/cfi/#sec-path-examples
+
+# Todo:
+
+- [x] Add Todo List 📋
+- [ ] Change out Exceptions for proper Exceptions like FileNotFoundError
+- [ ] Make this a python package
+- [ ] Make github action to auto upload pypi
+- [ ] Reorganize Code to multiple files
+- [ ] Make tests for individual functions rather than end to end.

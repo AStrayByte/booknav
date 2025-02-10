@@ -1,0 +1,22 @@
+[project]
+name = "booknav"
+version = "0.1.0"
+description = "Convert between EPUB CFI and Kobo locations for EPUB and KEPUB files"
+readme = "README.md"
+authors = [
+    { name = "AStrayByte"}
+]
+requires-python = ">=3.11"
+dependencies = []
+
+[project.scripts]
+booknav = "booknav:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3.4",
+]

@@ -37,7 +37,7 @@ A 2nd copy of each was made using Kepubify to test on Kepubs as well as epubs.
 
 - [x] Add Todo List 📋
 - [ ] Change out Exceptions for proper Exceptions like FileNotFoundError
-- [ ] Make this a python package
+- [x] Make this a python package
 - [ ] Make github action to auto upload pypi
 - [ ] Reorganize Code to multiple files
 - [ ] Make tests for individual functions rather than end to end.

@@ -8,7 +8,7 @@ This project hopes to be entirely written in standard python with no extra packa
 
 # Tests
 
-![Test Status](https://github.com/AStrayByte/booknav/actions/workflows/python-app.yml/badge.svg)
+![Test Status](https://github.com/AStrayByte/booknav/actions/workflows/run-pytest.yml/badge.svg)
 
 To run tests:
 
